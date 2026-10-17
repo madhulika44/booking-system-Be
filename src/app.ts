@@ -10,6 +10,12 @@ import { logger } from './config/logger';
 import { openapiSpec } from './docs/openapi';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 import { createRateLimiters } from './middleware/rate-limit';
+import { authRoutes } from './modules/auth/auth.routes';
+import { bookingRoutes, meRoutes } from './modules/bookings/booking.routes';
+import { holdsRoutes } from './modules/holds/holds.routes';
+import { categoriesRoutes } from './modules/categories/categories.routes';
+import { eventsRoutes } from './modules/events/events.routes';
+import { showsRoutes } from './modules/shows/shows.routes';
 
 export interface AppOptions {
   /** Rate limits are off in tests by default so suites don't trip them. */
@@ -44,7 +50,13 @@ export function createApp(options: AppOptions = {}): Express {
     }
   });
 
-  void limiters; // module routers are mounted here as phases are added
+  api.use('/auth', authRoutes(limiters));
+  api.use('/categories', categoriesRoutes());
+  api.use('/events', eventsRoutes());
+  api.use('/shows', showsRoutes());
+  api.use('/holds', holdsRoutes(limiters));
+  api.use('/bookings', bookingRoutes(limiters));
+  api.use('/me', meRoutes());
 
   app.use('/api', api);
   app.use(notFoundHandler);

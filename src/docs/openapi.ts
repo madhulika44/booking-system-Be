@@ -1,12 +1,11 @@
 /**
  * Hand-written OpenAPI 3 document served at /api/docs.
- * Kept as plain data so it is easy to read next to the routes.
+ * Each area's paths live in its own file under docs/ and are merged here.
  */
-
-const errorResponse = (description: string) => ({
-  description,
-  content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
-});
+import { authPaths } from './auth.paths';
+import { bookingPaths } from './booking.paths';
+import { catalogPaths } from './catalog.paths';
+import { errorResponse } from './common';
 
 export const openapiSpec = {
   openapi: '3.0.3',
@@ -15,7 +14,7 @@ export const openapiSpec = {
     version: '1.0.0',
     description:
       'Event booking platform API. Money is integer paise; timestamps are ISO-8601 UTC. ' +
-      'Authenticate with "Authorize" using the accessToken from /auth/login.',
+      'Click "Authorize" and paste the accessToken from /auth/login.',
   },
   servers: [{ url: '/api' }],
   components: {
@@ -36,9 +35,20 @@ export const openapiSpec = {
           },
         },
       },
+      User: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          email: { type: 'string', format: 'email' },
+          role: { type: 'string', enum: ['attendee', 'organizer', 'admin'] },
+          isActive: { type: 'boolean' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
     },
   },
-  tags: [{ name: 'System' }],
+  tags: [{ name: 'System' }, { name: 'Auth' }, { name: 'Catalog' }, { name: 'Booking' }],
   paths: {
     '/health': {
       get: {
@@ -50,7 +60,8 @@ export const openapiSpec = {
         },
       },
     },
-  } as Record<string, unknown>,
+    ...authPaths,
+    ...catalogPaths,
+    ...bookingPaths,
+  },
 };
-
-export { errorResponse };

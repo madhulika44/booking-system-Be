@@ -40,9 +40,14 @@ Mobile-first responsive styling with Tailwind; Material for interactive componen
 Commands (keep this section updated as scripts are added)
 # backend repo
 npm run dev          # start API with reload
+npm run db:create                 # create tickethive + tickethive_test databases if missing
 npm run migrate up                # apply migrations
-npm run seed                      # load demo data
+npm run migrate:test up           # apply migrations to the test database (npm test also does this)
+npm run seed                      # load demo data (wipes the dev database first)
 npm test                          # run tests (uses TEST_DATABASE_URL)
+npm run lint                      # ESLint
+npm run typecheck                 # tsc --noEmit
+npm run build && npm start        # compile to dist/ and run it
 
 # frontend repo
 npm start            # Angular dev server with /api proxy

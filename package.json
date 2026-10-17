@@ -14,7 +14,8 @@
     "test": "cross-env NODE_ENV=test jest --runInBand",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "pretest": "node-pg-migrate -m migrations -d TEST_DATABASE_URL --envPath .env --verbose false up"
   },
   "repository": {
     "type": "git",

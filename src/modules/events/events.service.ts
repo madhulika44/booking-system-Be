@@ -18,3 +18,5 @@ export async function getEventBySlug(slug: string): Promise<repo.EventDetail> {
   if (!event) throw notFound('Event');
   return event;
 }
+
+export const listCities = () => repo.listCitiesWithUpcomingShows();

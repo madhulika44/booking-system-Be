@@ -14,8 +14,10 @@ import { authRoutes } from './modules/auth/auth.routes';
 import { bookingRoutes, meRoutes } from './modules/bookings/booking.routes';
 import { holdsRoutes } from './modules/holds/holds.routes';
 import { categoriesRoutes } from './modules/categories/categories.routes';
-import { eventsRoutes } from './modules/events/events.routes';
+import { citiesRoutes, eventsRoutes } from './modules/events/events.routes';
 import { showsRoutes } from './modules/shows/shows.routes';
+import { organizerRoutes } from './modules/organizer/organizer.routes';
+import { adminRoutes } from './modules/admin/admin.routes';
 
 export interface AppOptions {
   /** Rate limits are off in tests by default so suites don't trip them. */
@@ -53,10 +55,13 @@ export function createApp(options: AppOptions = {}): Express {
   api.use('/auth', authRoutes(limiters));
   api.use('/categories', categoriesRoutes());
   api.use('/events', eventsRoutes());
+  api.use('/cities', citiesRoutes());
   api.use('/shows', showsRoutes());
   api.use('/holds', holdsRoutes(limiters));
   api.use('/bookings', bookingRoutes(limiters));
   api.use('/me', meRoutes());
+  api.use('/organizer', organizerRoutes());
+  api.use('/admin', adminRoutes());
 
   app.use('/api', api);
   app.use(notFoundHandler);

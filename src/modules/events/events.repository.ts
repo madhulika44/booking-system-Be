@@ -40,6 +40,8 @@ export interface EventFilters {
   city?: string;
   from?: Date;
   to?: Date;
+  minPrice?: number; // paise
+  maxPrice?: number; // paise
 }
 
 interface EventCardRow {
@@ -72,7 +74,7 @@ const toEventCard = (r: EventCardRow): EventCard => ({
 /**
  * Published events that have at least one upcoming scheduled show matching the city/date filters.
  * Filters are optional parameters ($n IS NULL OR ...) so the SQL text is static — no string building.
- *   $1 city  $2 from  $3 to  $4 category slug  $5 search pattern
+ *   $1 city  $2 from  $3 to  $4 category slug  $5 search pattern  $6 min price  $7 max price
  */
 const FILTERED_EVENTS_SQL = `
   WITH upcoming AS (
@@ -90,6 +92,9 @@ const FILTERED_EVENTS_SQL = `
       AND ($2::timestamptz IS NULL OR s.starts_at >= $2)
       AND ($3::timestamptz IS NULL OR s.starts_at <= $3)
     GROUP BY s.event_id
+    -- price filter: at least one zone of a matching upcoming show is inside the range
+    HAVING ($6::int IS NULL AND $7::int IS NULL)
+        OR bool_or(sz.price_paise BETWEEN COALESCE($6::int, 0) AND COALESCE($7::int, 2147483647))
   )
   SELECT e.id, e.title, e.slug, e.poster_url, e.language, e.duration_min,
          c.name AS category_name, c.slug AS category_slug,
@@ -110,6 +115,8 @@ function filterParams(f: EventFilters): unknown[] {
     f.to ?? null,
     f.category ?? null,
     f.q ? `%${escapeLike(f.q)}%` : null,
+    f.minPrice ?? null,
+    f.maxPrice ?? null,
   ];
 }
 
@@ -123,7 +130,7 @@ export async function listEvents(
     pool.query<EventCardRow>(
       `${FILTERED_EVENTS_SQL}
        ORDER BY u.next_show_at, e.title
-       LIMIT $6 OFFSET $7`,
+       LIMIT $8 OFFSET $9`,
       [...params, limit, offset],
     ),
     pool.query<{ total: number }>(
@@ -139,7 +146,7 @@ export async function listFeaturedEvents(limit: number): Promise<EventCard[]> {
   const { rows } = await pool.query<EventCardRow>(
     `${FILTERED_EVENTS_SQL}
      ORDER BY u.tickets_sold DESC, u.next_show_at
-     LIMIT $6`,
+     LIMIT $8`,
     [...filterParams({}), limit],
   );
   return rows.map(toEventCard);
@@ -209,4 +216,17 @@ export async function findPublishedEventBySlug(slug: string): Promise<EventDetai
     venues,
     shows: eventShows,
   };
+}
+
+/** Distinct venue cities that currently have at least one bookable (upcoming, published) show. */
+export async function listCitiesWithUpcomingShows(): Promise<string[]> {
+  const { rows } = await pool.query<{ city: string }>(
+    `SELECT DISTINCT v.city
+     FROM venues v
+     JOIN shows s ON s.venue_id = v.id
+     JOIN events e ON e.id = s.event_id
+     WHERE e.status = 'published' AND s.status = 'scheduled' AND s.starts_at > now()
+     ORDER BY v.city`,
+  );
+  return rows.map((r) => r.city);
 }

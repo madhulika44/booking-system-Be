@@ -11,3 +11,10 @@ export function eventsRoutes(): Router {
   router.get('/:slug', validate({ params: eventSlugParamsSchema }), controller.getBySlug);
   return router;
 }
+
+/** Mounted at /api/cities (city selector in the header). */
+export function citiesRoutes(): Router {
+  const router = Router();
+  router.get('/', controller.cities);
+  return router;
+}

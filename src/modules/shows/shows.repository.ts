@@ -212,6 +212,10 @@ export interface BookableShowRow {
   bookable: boolean;
 }
 
+/**
+ * FOR SHARE: many holds can be created on a show at once, but an organizer cancelling the show
+ * (FOR UPDATE) waits for them — and vice versa — so no hold slips in after cancellation.
+ */
 export async function findShowForBooking(
   db: Queryable,
   showId: string,
@@ -221,7 +225,8 @@ export async function findShowForBooking(
             (e.status = 'published' AND s.status = 'scheduled' AND s.starts_at > now()) AS bookable
      FROM shows s
      JOIN events e ON e.id = s.event_id
-     WHERE s.id = $1`,
+     WHERE s.id = $1
+     FOR SHARE OF s`,
     [showId],
   );
   const r = rows[0];

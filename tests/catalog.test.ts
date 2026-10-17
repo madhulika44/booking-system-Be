@@ -206,3 +206,47 @@ describe('GET /api/shows/:id/seats', () => {
     expect(authed[s1!]).toMatchObject({ status: 'held', mine: true });
   });
 });
+
+describe('GET /api/cities', () => {
+  it('lists distinct cities that have upcoming published shows', async () => {
+    await createShowFixture({ city: 'Mumbai' });
+    await createShowFixture({ city: 'Mumbai' });
+    await createShowFixture({ city: 'Pune' });
+    await createShowFixture({ city: 'Goa', eventStatus: 'pending' });
+    await createShowFixture({ city: 'Delhi', startsAt: new Date(Date.now() - DAY) });
+
+    const res = await request(app).get('/api/cities');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual(['Mumbai', 'Pune']);
+  });
+});
+
+describe('GET /api/events price filter', () => {
+  it('matches events with at least one zone inside [minPrice, maxPrice] (paise)', async () => {
+    await createShowFixture({
+      title: 'Cheap and Pricey',
+      zones: [
+        { name: 'Back', type: 'standing', capacity: 5, pricePaise: 20000 },
+        { name: 'VIP', type: 'standing', capacity: 5, pricePaise: 500000 },
+      ],
+    });
+    await createShowFixture({
+      title: 'Mid Only',
+      zones: [{ name: 'All', type: 'standing', capacity: 5, pricePaise: 100000 }],
+    });
+
+    const titles = async (qs: string) =>
+      (await request(app).get(`/api/events?${qs}`)).body.data
+        .map((e: { title: string }) => e.title)
+        .sort();
+
+    expect(await titles('minPrice=50000&maxPrice=150000')).toEqual(['Mid Only']);
+    expect(await titles('maxPrice=30000')).toEqual(['Cheap and Pricey']);
+    expect(await titles('minPrice=400000')).toEqual(['Cheap and Pricey']);
+    expect(await titles('minPrice=600000')).toEqual([]);
+    expect(await titles('')).toEqual(['Cheap and Pricey', 'Mid Only']);
+
+    const bad = await request(app).get('/api/events?minPrice=500&maxPrice=100');
+    expect(bad.status).toBe(400);
+  });
+});

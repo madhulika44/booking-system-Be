@@ -4,7 +4,9 @@
  */
 import { authPaths } from './auth.paths';
 import { bookingPaths } from './booking.paths';
+import { adminPaths } from './admin.paths';
 import { catalogPaths } from './catalog.paths';
+import { organizerPaths } from './organizer.paths';
 import { errorResponse } from './common';
 
 export const openapiSpec = {
@@ -48,7 +50,14 @@ export const openapiSpec = {
       },
     },
   },
-  tags: [{ name: 'System' }, { name: 'Auth' }, { name: 'Catalog' }, { name: 'Booking' }],
+  tags: [
+    { name: 'System' },
+    { name: 'Auth' },
+    { name: 'Catalog' },
+    { name: 'Booking' },
+    { name: 'Organizer' },
+    { name: 'Admin' },
+  ],
   paths: {
     '/health': {
       get: {
@@ -63,5 +72,7 @@ export const openapiSpec = {
     ...authPaths,
     ...catalogPaths,
     ...bookingPaths,
+    ...organizerPaths,
+    ...adminPaths,
   },
 };

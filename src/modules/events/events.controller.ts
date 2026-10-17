@@ -13,3 +13,7 @@ export async function featured(_req: Request, res: Response): Promise<void> {
 export async function getBySlug(req: Request, res: Response): Promise<void> {
   res.json(await eventsService.getEventBySlug(String(req.params.slug)));
 }
+
+export async function cities(_req: Request, res: Response): Promise<void> {
+  res.json({ data: await eventsService.listCities() });
+}

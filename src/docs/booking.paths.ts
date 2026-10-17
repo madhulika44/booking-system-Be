@@ -45,8 +45,37 @@ const bookingView = {
     createdAt: { type: 'string', format: 'date-time' },
     cancelledAt: { type: 'string', format: 'date-time', nullable: true },
     canCancel: { type: 'boolean' },
-    show: { type: 'object' },
-    items: { type: 'array', items: { type: 'object' } },
+    show: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        startsAt: { type: 'string', format: 'date-time' },
+        status: { type: 'string', enum: ['scheduled', 'cancelled', 'completed'] },
+        event: { type: 'object' },
+        venue: { type: 'object' },
+      },
+    },
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          zoneId: { type: 'string' },
+          zoneName: { type: 'string', example: 'Gold' },
+          zoneType: { type: 'string', enum: ['standing', 'seated'] },
+          quantity: { type: 'integer' },
+          unitPricePaise: { type: 'integer' },
+          seatId: { type: 'string', nullable: true },
+          rowLabel: { type: 'string', nullable: true, example: 'C' },
+          seatNumber: { type: 'integer', nullable: true, example: 7 },
+          seat: {
+            type: 'object',
+            nullable: true,
+            description: 'Same seat info, nested (kept for compatibility)',
+          },
+        },
+      },
+    },
   },
 };
 

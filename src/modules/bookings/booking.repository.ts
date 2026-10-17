@@ -11,6 +11,10 @@ export interface BookingItemView {
   zoneType: ZoneType;
   quantity: number;
   unitPricePaise: number;
+  /** Flat seat fields for easy display; null for standing zones. */
+  seatId: string | null;
+  rowLabel: string | null;
+  seatNumber: number | null;
   seat: { id: string; rowLabel: string; seatNumber: number } | null;
 }
 
@@ -27,6 +31,7 @@ export interface BookingView {
   show: {
     id: string;
     startsAt: Date;
+    status: 'scheduled' | 'cancelled' | 'completed';
     event: { id: string; title: string; slug: string; posterUrl: string | null };
     venue: { id: string; name: string; address: string; city: string };
   };
@@ -160,6 +165,7 @@ interface BookingRow {
   can_cancel: boolean;
   show_id: string;
   starts_at: Date;
+  show_status: 'scheduled' | 'cancelled' | 'completed';
   event_id: string;
   title: string;
   slug: string;
@@ -173,7 +179,7 @@ interface BookingRow {
 const BOOKING_SELECT = `
   SELECT b.id, b.booking_ref, b.status, b.total_paise, b.payment_ref, b.created_at, b.cancelled_at,
          (b.status = 'confirmed' AND s.starts_at - now() >= interval '2 hours') AS can_cancel,
-         s.id AS show_id, s.starts_at,
+         s.id AS show_id, s.starts_at, s.status AS show_status,
          e.id AS event_id, e.title, e.slug, e.poster_url,
          v.id AS venue_id, v.name AS venue_name, v.address AS venue_address, v.city AS venue_city
   FROM bookings b
@@ -213,6 +219,9 @@ async function attachItems(db: Queryable, rows: BookingRow[]): Promise<BookingVi
       zoneType: i.zone_type,
       quantity: i.quantity,
       unitPricePaise: i.unit_price_paise,
+      seatId: i.seat_id,
+      rowLabel: i.row_label,
+      seatNumber: i.seat_number,
       seat: i.seat_id
         ? { id: i.seat_id, rowLabel: i.row_label!, seatNumber: i.seat_number! }
         : null,
@@ -232,6 +241,7 @@ async function attachItems(db: Queryable, rows: BookingRow[]): Promise<BookingVi
     show: {
       id: r.show_id,
       startsAt: r.starts_at,
+      status: r.show_status,
       event: { id: r.event_id, title: r.title, slug: r.slug, posterUrl: r.poster_url },
       venue: { id: r.venue_id, name: r.venue_name, address: r.venue_address, city: r.venue_city },
     },
@@ -279,4 +289,49 @@ export async function listBookingsForUser(
     ),
   ]);
   return { rows: await attachItems(pool, data.rows), total: count.rows[0]!.total };
+}
+
+export interface ShowBookingView extends BookingView {
+  user: { id: string; name: string; email: string };
+}
+
+/** All bookings of one show, newest first (organizer view). */
+export async function listBookingsForShow(
+  showId: string,
+  limit: number,
+  offset: number,
+): Promise<{ rows: ShowBookingView[]; total: number }> {
+  const [data, count] = await Promise.all([
+    pool.query<BookingRow & { user_id: string; user_name: string; user_email: string }>(
+      `SELECT q.*, u.id AS user_id, u.name AS user_name, u.email AS user_email
+       FROM (${BOOKING_SELECT} WHERE b.show_id = $1) q
+       JOIN bookings b2 ON b2.id = q.id
+       JOIN users u ON u.id = b2.user_id
+       ORDER BY q.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [showId, limit, offset],
+    ),
+    pool.query<{ total: number }>(
+      'SELECT COUNT(*)::int AS total FROM bookings WHERE show_id = $1',
+      [showId],
+    ),
+  ]);
+  const views = await attachItems(pool, data.rows);
+  const rows = views.map((v, i) => {
+    const r = data.rows[i]!;
+    return { ...v, user: { id: r.user_id, name: r.user_name, email: r.user_email } };
+  });
+  return { rows, total: count.rows[0]!.total };
+}
+
+/** Confirmed bookings of a show, locked — used when the show is cancelled. */
+export async function lockConfirmedBookingIdsForShow(
+  client: PoolClient,
+  showId: string,
+): Promise<string[]> {
+  const { rows } = await client.query<{ id: string }>(
+    `SELECT id FROM bookings WHERE show_id = $1 AND status = 'confirmed' ORDER BY id FOR UPDATE`,
+    [showId],
+  );
+  return rows.map((r) => r.id);
 }

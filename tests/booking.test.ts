@@ -523,6 +523,20 @@ describe('checkout', () => {
     expect(ok.status).toBe(201);
     expect(ok.body.paymentRef).toMatch(/^MOCK-/);
     expect(ok.body.items).toHaveLength(2);
+    expect(ok.body.items[0]).toMatchObject({
+      zoneName: 'Gold',
+      rowLabel: 'A',
+      seatNumber: 1,
+      seatId: seatIds[0],
+      quantity: 1,
+      unitPricePaise: 50000,
+    });
+    const mine = await request(server).get('/api/me/bookings').set(bearer(user));
+    expect(
+      mine.body.data[0].items.map(
+        (i: { rowLabel: string; seatNumber: number }) => `${i.rowLabel}${i.seatNumber}`,
+      ),
+    ).toEqual(['A1', 'A2']);
     expect(await zoneCounts(seated(show).id)).toMatchObject({ sold_count: 2, held_count: 0 });
 
     const converted = await confirm(user, h.body.holdId);

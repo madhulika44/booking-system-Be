@@ -62,6 +62,16 @@ export const catalogPaths = {
         queryParam('city', { type: 'string' }, 'Venue city (case-insensitive)'),
         queryParam('from', { type: 'string', format: 'date-time' }, 'Show starts at/after'),
         queryParam('to', { type: 'string', format: 'date-time' }, 'Show starts at/before'),
+        queryParam(
+          'minPrice',
+          { type: 'integer', minimum: 0 },
+          'Paise; event has a zone priced ≥ this',
+        ),
+        queryParam(
+          'maxPrice',
+          { type: 'integer', minimum: 0 },
+          'Paise; event has a zone priced ≤ this (both: a zone inside the range)',
+        ),
         ...paginationParams,
       ],
       responses: {
@@ -75,6 +85,20 @@ export const catalogPaths = {
           },
         }),
         400: errorResponse('VALIDATION_ERROR'),
+      },
+    },
+  },
+  '/cities': {
+    get: {
+      tags: ['Catalog'],
+      summary: 'Distinct venue cities that have upcoming published shows',
+      responses: {
+        200: ok('Cities', {
+          type: 'object',
+          properties: {
+            data: { type: 'array', items: { type: 'string' }, example: ['Bengaluru', 'Mumbai'] },
+          },
+        }),
       },
     },
   },

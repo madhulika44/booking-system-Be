@@ -182,3 +182,15 @@ export async function setHoldStatus(
 ): Promise<void> {
   await client.query('UPDATE holds SET status = $2 WHERE id = ANY($1::uuid[])', [holdIds, status]);
 }
+
+/** Every active hold on a show (expired or not), locked — used when the show is cancelled. */
+export async function lockActiveHoldIdsForShow(
+  client: PoolClient,
+  showId: string,
+): Promise<string[]> {
+  const { rows } = await client.query<{ id: string }>(
+    `SELECT id FROM holds WHERE show_id = $1 AND status = 'active' ORDER BY id FOR UPDATE`,
+    [showId],
+  );
+  return rows.map((r) => r.id);
+}

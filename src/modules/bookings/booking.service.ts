@@ -366,3 +366,26 @@ export async function listMyBookings(
   );
   return { data: rows, page: query.page, limit: query.limit, total };
 }
+
+/**
+ * Show cancelled by the organizer/admin: release every active hold and cancel every confirmed
+ * booking, returning inventory exactly like a user cancellation would (mock payments, so there
+ * is no refund to issue). Must run inside the caller's transaction.
+ */
+export async function cancelAllForShow(
+  client: PoolClient,
+  showId: string,
+): Promise<{ releasedHolds: number; cancelledBookings: number }> {
+  const holdIds = await holdsRepo.lockActiveHoldIdsForShow(client, showId);
+  await releaseHolds(client, holdIds, 'released');
+
+  const bookingIds = await bookingRepo.lockConfirmedBookingIdsForShow(client, showId);
+  for (const bookingId of bookingIds) {
+    const items = await bookingRepo.listBookingInventory(client, bookingId);
+    for (const zone of groupByZone(items)) {
+      await strategyFor(zone.zoneType).cancel(client, zone);
+    }
+    await bookingRepo.markCancelled(client, bookingId);
+  }
+  return { releasedHolds: holdIds.length, cancelledBookings: bookingIds.length };
+}

@@ -158,7 +158,8 @@ Auth: POST /auth/register · POST /auth/login · POST /auth/refresh · POST /aut
 Public
 
 GET /categories
-GET /events?q=&category=&city=&from=&to=&page=&limit= — published events with at least one upcoming show; sorted by next show date
+GET /cities — distinct venue cities that have upcoming published shows → { data: ["Bengaluru", …] }
+GET /events?q=&category=&city=&from=&to=&minPrice=&maxPrice=&page=&limit= — published events with at least one upcoming show; sorted by next show date. minPrice/maxPrice are paise (either or both); an event matches if at least one zone of a matching upcoming show is priced within the range
 GET /events/featured — for home carousel
 GET /events/:slug — event + venue + upcoming shows
 GET /shows/:id — show + zones (price, type, available = capacity − sold − active held)
@@ -168,6 +169,8 @@ Attendee
 
 POST /holds · GET /holds/:id · DELETE /holds/:id
 POST /bookings · GET /me/bookings?status=upcoming|past · GET /bookings/:id · POST /bookings/:id/cancel
+
+Booking responses include show.status and, per item: zoneId, zoneName, zoneType, quantity, unitPricePaise, seatId, rowLabel, seatNumber (seat fields null for standing zones).
 
 Organizer (requireRole('organizer','admin'), ownership enforced)
 
